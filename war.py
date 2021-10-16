@@ -1,24 +1,56 @@
 import random
+
 from datetime import datetime
+import time
+import sqlite3
+from sqlite3 import Error
+
 
 deck = []
 player1_hand = []
 player2_hand = []
 score_player1 = 0
 score_player2 = 0
-round = 1
-today = datetime.now()
-todaystr = datetime.isoformat(today)
+current_round = 1
+t = time.localtime()
+current_time = time.strftime("%H:%M:%S", t)
+
+round_winner = ""
 f = open("C:\\Users\\tony_\\Google Drive\\Dev\\Programming\\Python\\Projects\\War\\war.dat", "a")
 f.write("Begin New Game")
 f.write("\n")
-f.write(todaystr)
-# f.write("  ")
-# f.write(todaystime)
+f.write(current_time)
 f.write("\n")
 f.write("***********************************************")
 f.write("\n")
 f.close()
+
+def insertVaribleIntoTable(current_time, current_round, player1_card, player2_card,round_winner):
+
+    try:
+        sqliteConnection = sqlite3.connect("C:\\Users\\tony_\\Google Drive\\Dev\\Programming\\Python\\Projects\\War\\war.sqlite")
+        cursor = sqliteConnection.cursor()
+        print("Connected to SQLite")
+
+        sqlite_insert_with_param = """INSERT INTO war_hands
+                          (current_time, current_round, player1_card, player2_card, round_winner) 
+                          VALUES (?, ?, ?, ?, ?);"""
+
+        data_tuple = (current_time, current_round, player1_card, player2_card, round_winner)
+        cursor.execute(sqlite_insert_with_param, data_tuple)
+        sqliteConnection.commit()
+        print("Python Variables inserted successfully into SqliteDb_developers table")
+
+        cursor.close()
+
+    except sqlite3.Error as error:
+        print("Failed to insert Python variable into sqlite table", error)
+    finally:
+        if sqliteConnection:
+            sqliteConnection.close()
+            print("The SQLite connection is closed")
+
+
 def play():
     player1_hand_used = []
     player2_hand_used = []
@@ -26,10 +58,14 @@ def play():
     global player2_hand
     global score_player1
     global score_player2
-    global round
+    global current_round
+    global current_time
+ #   conn = sqlite3.connect("C:\\Users\\tony_\\Google Drive\\Dev\\Programming\\Python\\Projects\\War\\war.sqlite")
+ #   print("Opened database successfully...")
+   
     
     for i in player1_hand:
-        print("Round: ",round)
+        print("Round: ",current_round)
         player1_card = player1_hand.pop()
         print("player1_card: ",player1_card)
         player2_card = player2_hand.pop()
@@ -39,7 +75,7 @@ def play():
             print("Player1 wins Battle!")
             f = open("C:\\Users\\tony_\\Google Drive\\Dev\\Programming\\Python\\Projects\\War\\war.dat", "a")
             f.write("Round: ")
-            f.write(str(round))
+            f.write(str(current_round))
             f.write("\n")
             f.write("Player1 Card: ")
             f.write(player1_card)
@@ -47,15 +83,18 @@ def play():
             f.write("Player2 Card: ")
             f.write(player2_card)
             f.write("\n")
-            f.write("Player1 wins Battle!")
+            f.write("Player1 wins Battle[Round]!")
             f.write("\n")
             f.close()
+            round_winner = "Player 1"
+
+            insertVaribleIntoTable(current_time, current_round, player1_card, player2_card,round_winner)
             player1_hand_used.append(player1_card)
             player1_hand_used.append(player2_card)
         elif player2_card > player1_card:
             f = open("C:\\Users\\tony_\\Google Drive\\Dev\\Programming\\Python\\Projects\\War\\war.dat", "a")
             f.write("Round: ")
-            f.write(str(round))
+            f.write(str(current_round))
             f.write("\n")
             f.write("Player1 Card: ")
             f.write(player1_card)
@@ -66,7 +105,11 @@ def play():
             f.write("Player2 wins Battle!")
             f.write("\n")
             f.close()
-            print("Player2 wins Battle!")
+            print("Player2 wins Battle[Round]!")
+            round_winner = "Player 2"
+
+            insertVaribleIntoTable(current_time, current_round, player1_card, player2_card,round_winner)
+
             player2_hand_used.append(player1_card)
             player2_hand_used.append(player2_card)
     print("player1_hand_used: ", player1_hand_used)
@@ -86,6 +129,9 @@ def play():
         f = open("C:\\Users\\tony_\\Google Drive\\Dev\\Programming\\Python\\Projects\\War\\warplayer2wins.dat", "w")
         f.write(str(player2winsnow))
         f.close()
+
+       # conn.commit()
+       # conn.close()
     elif len(player2_hand) == 0:
         print("Player1 Wins Game!")
         f = open("C:\\Users\\tony_\\Google Drive\\Dev\\Programming\\Python\\Projects\\War\\war.dat", "a")
@@ -101,10 +147,11 @@ def play():
         f = open("C:\\Users\\tony_\\Google Drive\\Dev\\Programming\\Python\\Projects\\War\\warplayer1wins.dat", "w")
         f.write(str(player1winsnow))
         f.close()
+        
     else:
         player1_hand = player1_hand_used
         player2_hand = player2_hand_used
-        round = round + 1
+        current_round = current_round + 1
         play()
 
 
@@ -115,6 +162,7 @@ def create_deck():
     global player1_hand
     global player2_hand
     global deck
+    global round
     cards = ["13", "12", "11", "10", "09", "08", "07", "06", "05", "04", "03", "02", "01"]
     suits = ["Clubs", "Spades", "Hearts", "Diamonds"]
 
